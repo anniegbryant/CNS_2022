@@ -1,0 +1,115 @@
+---
+title: "Analysing pyspi data in R"
+date: "2022-07-12"
+
+output:
+  html_document:
+    theme: flatly
+    number_sections: yes
+    self_contained: yes
+    toc: true
+    toc_float: false
+    toc_depth: 3
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+## Analysing pyspi-generated multivariate time series feature data in R
+
+### Prepare the R environment
+
+Unless otherwise specified, `reticulate` will use the default Python version installed in your `PATH`. If you are happy to use the default version of python, you can skip to the next section. If you wish to use a different python version, you should define this before loading the `reticulate` package as follows:
+```{r, echo = F}
+python_to_use <- "/home/osboxes/anaconda3/envs/pyspi/bin/python3"
+reticulate::use_python(python_to_use)
+```
+
+```{r, eval = F}
+python_to_use <- "/path/to/python3"
+reticulate::use_python(python_to_use)
+```
+
+### Load relevant packages
+
+Once you load your preferred python version -- or if you are groovy with the default version -- load the packages needed:
+
+```{r}
+library(tidyverse)
+library(reticulate)
+library(knitr)
+library(kableExtra)
+library(cowplot)
+theme_set(theme_cowplot())
+```
+
+### Source python functions
+
+Now, we need to source the `pickle_reader_for_R.py` file that contains code to read in the `.pkl` file and output an R-friendly `data.frame` object:
+```{r}
+source_python("pickle_reader_for_R.py")
+```
+
+We now have a function in our environment called `extract_df_from_pkl()`. This creates an interface between python and R that allows us to read in the `.pkl` file and perform data wrangling steps in python, behind-the-scenes, yielding a dataframe.
+
+```{r}
+pyspi_data <- extract_df_from_pkl("tutorial_example_data/pyspi_calc_table.pkl")
+
+head(pyspi_data)
+```
+
+There are two notes right off the bat:  
+1. The `value` column is currently of the type "complex"; and   
+2. We don't yet have the names of the brain regions. 
+
+We can address the first note by setting `pyspi_data$value` explicitly to a `numeric`:
+```{r}
+pyspi_data$value <- as.numeric(pyspi_data$value)
+
+head(pyspi_data)
+```
+Second, we can add in the names of brain regions using the `ROI_info.csv` file included in the tutorial repo.
+
+```{r}
+ROI_info <- read.csv("tutorial_example_data/ROI_info.csv")
+ROI_info %>% kable(.) %>% kable_styling(full_width=F)
+```
+
+
+And now we can use some `dplyr` data wrangling operations to merge the pyspi results with the brain region information:
+```{r}
+pyspi_data <- pyspi_data %>%
+  # Convert Variable_1 and Variable_2 to indices to be joined with ROI_info table
+  mutate(Variable_1 = as.numeric(str_replace_all(Variable_1, "proc-", "")),
+         Variable_2 = as.numeric(str_replace_all(Variable_2, "proc-", ""))) %>%
+  
+  # Join on the first variable
+  left_join(., ROI_info, by=c("Variable_1" = "Index")) %>%
+  dplyr::rename("Brain_Region_1" = "ROI") %>%
+  
+  # Join on the second variable
+  left_join(., ROI_info, by=c("Variable_2" = "Index")) %>%
+  dplyr::rename("Brain_Region_2" = "ROI") %>%
+  dplyr::select(-Variable_1, -Variable_2)
+
+head(pyspi_data)
+```
+
+We can visualize the Pearson correlation coefficient across brain regions:
+
+```{r}
+pyspi_data %>%
+  filter(SPI == "cov_EmpiricalCovariance") %>%
+  ggplot(data=., mapping=aes(x=Brain_Region_1, y=Brain_Region_2, fill=value)) +
+  geom_tile() +
+  ylab("Brain Region") +
+  xlab("Brain Region") +
+  ggtitle("Pearson Correlation for BOLD fMRI\nDynamcis Across Brain Regions") +
+  labs(fill = "Pearson\nCorrelation") +
+  scale_fill_gradient(low="white", high="red", na.value="gray80") +
+  theme(axis.text.x = element_text(angle=90, hjust=1, vjust=0.4),
+        plot.title = element_text(hjust=0.5))
+```
+
