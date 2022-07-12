@@ -17,11 +17,13 @@ from matplotlib import colors
 
 # Load in raw BOLD fMRI time-series data for example subject
 # TODO: make this reproducible
-BOLD_fMRI_TS_data = np.load("/media/sf_Shared_Folder/github/CNS_2022_pyspi/tutorial_example_data/BOLD_fMRI_TS_example.npy")
-ROI_info = pd.read_csv("/media/sf_Shared_Folder/github/CNS_2022_pyspi/tutorial_example_data/ROI_info.csv")
+ROI_info = pd.read_csv("/media/sf_Shared_Folder/github/CNS_2022/pyspi_tutorial/tutorial_example_data/ROI_info.csv")
+BOLD_fMRI_TS_data = pd.read_csv("/media/sf_Shared_Folder/github/CNS_2022/pyspi_tutorial/tutorial_example_data/BOLD_fMRI_TS_example.csv",
+                   header = None)
+ROI_info = pd.read_csv("/media/sf_Shared_Folder/github/CNS_2022/pyspi_tutorial/tutorial_example_data/ROI_info.csv")
 
 # Plotting the data
-def plot_data(z, labels):
+def plot_data_lines(z, labels):
     plt.subplots()
     plt.pcolormesh(z,cmap=sns.color_palette('icefire_r',as_cmap=True))
     plt.colorbar()
@@ -32,7 +34,20 @@ def plot_data(z, labels):
     plt.ylabel('Brain Region')
     plt.show()
 
-plot_data(BOLD_fMRI_TS_data, labels = ROI_info.ROI)
+plot_data_heatmap(BOLD_fMRI_TS_data, labels = ROI_info.ROI)
+
+def plot_data_heatmap(z, labels):
+    plt.subplots()
+    plt.pcolormesh(z,cmap=sns.color_palette('icefire_r',as_cmap=True))
+    plt.colorbar()
+
+    ticks = [t+0.5 for t in range(len(labels))]
+    plt.yticks(ticks=ticks, labels=labels)
+    plt.xlabel('Time (fMRI frame)')
+    plt.ylabel('Brain Region')
+    plt.show()
+
+plot_data_heatmap(BOLD_fMRI_TS_data, labels = ROI_info.ROI)
 
 # These two lines show the main usage of the calculator: simply instantiate and compute.
 calc = Calculator(BOLD_fMRI_TS_data, fast=True)
