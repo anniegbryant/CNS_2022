@@ -55,7 +55,7 @@ source_python("pickle_reader_for_R.py")
 We now have a function in our environment called `extract_df_from_pkl()`. This creates an interface between python and R that allows us to read in the `.pkl` file and perform data wrangling steps in python, behind-the-scenes, yielding a dataframe.
 
 ```{r}
-pyspi_data <- extract_df_from_pkl("tutorial_example_data/pyspi_calc_table.pkl")
+pyspi_data <- extract_df_from_pkl("../tutorial_example_data/pyspi_calc_set1_table.pkl")
 
 head(pyspi_data)
 ```
@@ -70,11 +70,11 @@ pyspi_data$value <- as.numeric(pyspi_data$value)
 
 head(pyspi_data)
 ```
-Second, we can add in the names of brain regions using the `ROI_info.csv` file included in the tutorial repo.
+Second, we can add in the names of brain regions.
 
 ```{r}
-ROI_info <- read.csv("tutorial_example_data/ROI_info.csv")
-ROI_info %>% kable(.) %>% kable_styling(full_width=F)
+ROI_info <- data.frame(Index = 0:3,
+                       ROI = c("ROI1", "ROI2", "ROI3", "ROI4"))
 ```
 
 
@@ -108,7 +108,7 @@ pyspi_data %>%
   xlab("Brain Region") +
   ggtitle("Pearson Correlation for BOLD fMRI\nDynamcis Across Brain Regions") +
   labs(fill = "Pearson\nCorrelation") +
-  scale_fill_gradient(low="white", high="red", na.value="gray80") +
+  scale_fill_gradient2(low="blue", mid="white", high="red", na.value="gray80") +
   theme(axis.text.x = element_text(angle=90, hjust=1, vjust=0.4),
         plot.title = element_text(hjust=0.5))
 ```
